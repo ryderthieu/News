@@ -11,12 +11,12 @@ import { UsersModule } from '../users/users.module';
     PassportModule,
     JwtModule.register({
       secret: JWT_SECRET,
-      signOptions: {expiresIn: JWT_EXPIRES_IN}
+      signOptions: { expiresIn: JWT_EXPIRES_IN },
     }),
     PrismaModule,
-    forwardRef(() => UsersModule)
+    forwardRef(() => UsersModule),
   ],
   providers: [AuthService],
-  exports: [AuthService]
+  exports: [AuthService],
 })
 export class AuthModule {}

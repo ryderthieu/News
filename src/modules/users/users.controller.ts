@@ -6,21 +6,20 @@ import { LoginDto } from './dto/login.dto';
 
 @Controller('users')
 export class UsersController {
-    constructor(
-        private usersService: UsersService,
-        private authService: AuthService
-    ) {}
+  constructor(
+    private usersService: UsersService,
+    private authService: AuthService,
+  ) {}
 
-    @Post()
-    async createUser(@Body() createUserDto: CreateUserDto) {
-        const user = await this.usersService.createUser(createUserDto);
-        return user
-    }
+  @Post()
+  async create(@Body() createUserDto: CreateUserDto) {
+    const user = await this.usersService.create(createUserDto);
+    return user;
+  }
 
-    @Post('login')
-    async login (@Body() loginDto: LoginDto) {
-        const user = await this.authService.login(loginDto)
-        return user
-    }
+  @Post('login')
+  async login(@Body() loginDto: LoginDto) {
+    const user = await this.authService.login(loginDto);
+    return user;
+  }
 }
-
