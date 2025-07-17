@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { JWT_EXPIRES_IN, JWT_SECRET } from 'src/common/constrants/jwt.constant';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
+import { JwtStrategy } from './jwt.strategy';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { UsersModule } from '../users/users.module';
     PrismaModule,
     forwardRef(() => UsersModule),
   ],
-  providers: [AuthService],
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}
