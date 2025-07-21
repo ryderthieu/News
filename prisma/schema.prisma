@@ -10,9 +10,22 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
-  username  String
+  username  String   @unique
   password  String
   bio       String?  @default("")
   image     String?  @default("")
   createdAt DateTime @default(now())
+
+  following   Relationship[] @relation("following")
+  followers   Relationship[] @relation("followers")
+}
+
+model Relationship {
+  followerId Int
+  followingId Int
+
+  follower   User @relation("following", fields: [followerId], references: [id])
+  following  User @relation("followers", fields: [followingId], references: [id])
+
+  @@id([followerId, followingId])
 }
