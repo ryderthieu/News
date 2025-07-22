@@ -9,6 +9,12 @@ import { User } from '@prisma/client';
 import { CreateArticleDto } from './dto/create-article.dto';
 import slugify from 'slugify';
 import { UpdateArticleDto } from './dto/update-article.dto';
+import { GetArticlesQueryDto } from './dto/get-articles-query.dto';
+import {
+  DEFAULT_LIMIT,
+  DEFAULT_OFFSET,
+} from 'src/common/constrants/pagination.constant';
+
 
 @Injectable()
 export class ArticlesService {
@@ -246,5 +252,365 @@ export class ArticlesService {
     });
 
     return { message: 'Article deleted successfully' };
+  }
+
+  async favorite(slug: string, currentUser: User) {
+    const article = await this.prisma.article.findUnique({
+      where: { slug },
+    });
+
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+
+    const favorite = await this.prisma.favorite.findUnique({
+      where: {
+        userId_articleId: {
+          userId: currentUser.id,
+          articleId: article.id,
+        },
+      },
+    });
+
+    if (favorite) {
+      throw new ConflictException('Article already favorited');
+    }
+
+    const updatedArticle = await this.prisma.$transaction(async (tx) => {
+      await tx.favorite.create({
+        data: {
+          userId: currentUser.id,
+          articleId: article.id,
+        },
+      });
+
+      const updated = await tx.article.update({
+        where: { id: article.id },
+        data: { favoritesCount: { increment: 1 } },
+        include: {
+          tags: {
+            select: {
+              tag: { select: { name: true } },
+            },
+          },
+        },
+      });
+
+      return updated;
+    });
+
+    const following = await this.prisma.relationship.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUser.id,
+          followingId: article.authorId,
+        },
+      },
+    });
+
+    return {
+      article: {
+        slug: updatedArticle.slug,
+        title: updatedArticle.title,
+        description: updatedArticle.description,
+        body: updatedArticle.body,
+        tags: updatedArticle.tags.map((t) => t.tag.name),
+        createdAt: updatedArticle.createdAt,
+        updatedAt: updatedArticle.updatedAt,
+        favorited: true,
+        favoritesCount: updatedArticle.favoritesCount,
+        author: {
+          username: currentUser.username,
+          bio: currentUser.bio,
+          image: currentUser.image,
+          following: !!following,
+        },
+      },
+    };
+  }
+
+  async unfavorite(slug: string, currentUser: User) {
+    const article = await this.prisma.article.findUnique({
+      where: { slug },
+    });
+
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+
+    const favorite = await this.prisma.favorite.findUnique({
+      where: {
+        userId_articleId: {
+          userId: currentUser.id,
+          articleId: article.id,
+        },
+      },
+    });
+
+    if (!favorite) {
+      throw new ConflictException('Article not favorited');
+    }
+
+    const updatedArticle = await this.prisma.$transaction(async (tx) => {
+      await tx.favorite.delete({
+        where: {
+          userId_articleId: {
+            userId: currentUser.id,
+            articleId: article.id,
+          },
+        },
+      });
+
+      const updated = await tx.article.update({
+        where: { id: article.id },
+        data: { favoritesCount: { decrement: 1 } },
+        include: {
+          tags: {
+            select: {
+              tag: { select: { name: true } },
+            },
+          },
+        },
+      });
+      return updated;
+    });
+
+    const following = await this.prisma.relationship.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUser.id,
+          followingId: article.authorId,
+        },
+      },
+    });
+
+    return {
+      article: {
+        slug: updatedArticle.slug,
+        title: updatedArticle.title,
+        description: updatedArticle.description,
+        body: updatedArticle.body,
+        tags: updatedArticle.tags.map((t) => t.tag.name),
+        createdAt: updatedArticle.createdAt,
+        updatedAt: updatedArticle.updatedAt,
+        favorited: false,
+        favoritesCount: updatedArticle.favoritesCount,
+        author: {
+          username: currentUser.username,
+          bio: currentUser.bio,
+          image: currentUser.image,
+          following: !!following,
+        },
+      },
+    };
+  }
+
+  async getList(query: GetArticlesQueryDto, currentUser?: User) {
+    const {
+      tag,
+      author,
+      favorited,
+      limit = DEFAULT_LIMIT,
+      offset = DEFAULT_OFFSET,
+    } = query;
+
+    const where: any = {};
+
+    if (tag) {
+      where.tags = {
+        some: {
+          tag: {
+            name: tag,
+          },
+        },
+      };
+    }
+
+    if (author) {
+      where.author = {
+        username: author,
+      };
+    }
+
+    if (favorited) {
+      where.favorites = {
+        some: {
+          user: {
+            username: favorited,
+          },
+        },
+      };
+    }
+
+    const [articles, total] = await this.prisma.$transaction([
+      this.prisma.article.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          tags: {
+            select: {
+              tag: {
+                select: { name: true },
+              },
+            },
+          },
+          author: {
+            select: {
+              username: true,
+              bio: true,
+              image: true,
+            },
+          },
+        },
+      }),
+      this.prisma.article.count({ where }),
+    ]);
+
+    const formattedArticles = await Promise.all(
+      articles.map(async (article) => {
+        const favourited = currentUser
+          ? await this.prisma.favorite.findUnique({
+              where: {
+                userId_articleId: {
+                  userId: currentUser.id,
+                  articleId: article.id,
+                },
+              },
+            })
+          : null;
+
+        const following = currentUser
+          ? await this.prisma.relationship.findUnique({
+              where: {
+                followerId_followingId: {
+                  followerId: currentUser.id,
+                  followingId: article.authorId,
+                },
+              },
+            })
+          : null;
+
+        return {
+          slug: article.slug,
+          title: article.title,
+          description: article.description,
+          body: article.body,
+          tags: article.tags.map((t) => t.tag.name),
+          createdAt: article.createdAt,
+          updatedAt: article.updatedAt,
+          favorited: !!favourited,
+          favoritesCount: article.favoritesCount,
+          author: {
+            username: article.author.username,
+            bio: article.author.bio,
+            image: article.author.image,
+            following: !!following,
+          },
+        };
+      }),
+    );
+
+    return {
+      articles: formattedArticles,
+      articlesCount: total,
+      offset,
+      limit,
+      totalOffset: Math.ceil(total / limit),
+    };
+  }
+
+  async getFeed(query: GetArticlesQueryDto, currentUser: User) {
+    const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET } = query;
+
+    const [articles, total] = await this.prisma.$transaction([
+      this.prisma.article.findMany({
+        where: {
+          author: {
+            followers: {
+              some: {
+                followerId: currentUser.id,
+              },
+            },
+          },
+        },
+        take: limit,
+        skip: offset,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          author: {
+            select: {
+              username: true,
+              bio: true,
+              image: true,
+            },
+          },
+          tags: {
+            select: {
+              tag: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.article.count({
+        where: {
+          author: {
+            followers: {
+              some: {
+                followerId: currentUser.id,
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    const formattedArticles = await Promise.all(
+      articles.map(async (article) => {
+        const favourited = await this.prisma.favorite.findUnique({
+          where: {
+            userId_articleId: {
+              userId: currentUser.id,
+              articleId: article.id,
+            },
+          },
+        });
+
+        return {
+          slug: article.slug,
+          title: article.title,
+          description: article.description,
+          body: article.body,
+          tags: article.tags.map((t) => t.tag.name),
+          createdAt: article.createdAt,
+          updatedAt: article.updatedAt,
+          favorited: !!favourited,
+          favoritesCount: article.favoritesCount,
+          author: {
+            username: article.author.username,
+            bio: article.author.bio,
+            image: article.author.image,
+            following: true,
+          },
+        };
+      }),
+    );
+
+    return {
+      articles: formattedArticles,
+      articlesCount: total,
+      offset,
+      limit,
+      totalOffset: Math.ceil(total / limit),
+    };
   }
 }
