@@ -18,6 +18,7 @@ import { UpdateArticleDto } from './dto/update-article.dto';
 import { GetArticlesQueryDto } from './dto/get-articles-query.dto';
 import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
 
+
 @Controller('articles')
 export class ArticlesController {
   constructor(private articlesService: ArticlesService) {}
@@ -52,7 +53,7 @@ export class ArticlesController {
   async delete(@Param('slug') slug: string, @CurrentUser() currentUser: User) {
     return this.articlesService.delete(slug, currentUser);
   }
-
+  
   @Post(':slug/favorite')
   @UseGuards(AuthGuard('jwt'))
   async favorite(
