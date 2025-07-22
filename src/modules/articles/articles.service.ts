@@ -14,50 +14,51 @@ import { UpdateArticleDto } from './dto/update-article.dto';
 export class ArticlesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(currentUser: User, createArticleDto: CreateArticleDto) {
-    let slug = slugify(createArticleDto.title, { lower: true });
+  async create(currentUser: User, dto: CreateArticleDto) {
+    let slug = slugify(dto.title, { lower: true });
 
-    if (await this.prisma.article.findUnique({ where: { slug } })) {
-      throw new ConflictException('Title already exists');
-    }
-    const article = await this.prisma.article.create({
-      data: {
-        title: createArticleDto.title,
-        description: createArticleDto.description,
-        body: createArticleDto.body,
-        authorId: currentUser.id,
-        slug,
-      },
-    });
+    const exists = await this.prisma.article.findUnique({ where: { slug } });
+    if (exists) throw new ConflictException('Title already exists');
 
-    if (
-      Array.isArray(createArticleDto.tags) &&
-      createArticleDto.tags.length > 0
-    ) {
-      for (const tagName of createArticleDto.tags) {
-        const tag = await this.prisma.tag.upsert({
+    const createdArticle = await this.prisma.$transaction(async (tx) => {
+      const article = await tx.article.create({
+        data: {
+          title: dto.title,
+          description: dto.description,
+          body: dto.body,
+          authorId: currentUser.id,
+          slug,
+        },
+      });
+
+      const tagList = dto.tags ?? [];
+
+      for (const tagName of tagList) {
+        const tag = await tx.tag.upsert({
           where: { name: tagName },
           update: {},
           create: { name: tagName },
         });
 
-        await this.prisma.articleTag.create({
+        await tx.articleTag.create({
           data: {
             articleId: article.id,
             tagId: tag.id,
           },
         });
       }
-    }
+
+      return article;
+    });
 
     const formattedArticle = {
-      slug: article.slug,
-      title: article.title,
-      description: article.description,
-      body: article.body,
-      tags: createArticleDto.tags,
-      createdAt: article.createdAt,
-      updatedAt: article.updatedAt,
+      slug: createdArticle.slug,
+      title: createdArticle.title,
+      description: createdArticle.description,
+      body: createdArticle.body,
+      tags: dto.tags,
+      createdAt: createdArticle.createdAt,
+      updatedAt: createdArticle.updatedAt,
       favorited: false,
       favoritesCount: 0,
       author: {
@@ -67,6 +68,7 @@ export class ArticlesService {
         following: false,
       },
     };
+
     return { article: formattedArticle };
   }
 
@@ -124,43 +126,50 @@ export class ArticlesService {
     const newSlug = slugify(updateArticleDto.title, { lower: true });
 
     if (newSlug !== article.slug) {
-      if (await this.prisma.article.findUnique({ where: { slug: newSlug } })) {
+      const existing = await this.prisma.article.findUnique({
+        where: { slug: newSlug },
+      });
+      if (existing) {
         throw new ConflictException('Title already exists');
       }
     }
 
-    const updatedArticle = await this.prisma.article.update({
-      where: { slug },
-      data: {
-        title: updateArticleDto.title,
-        description: updateArticleDto.description,
-        body: updateArticleDto.body,
-        slug: newSlug,
-      },
-    });
-
-    if (Array.isArray(updateArticleDto.tags)) {
-      await this.prisma.articleTag.deleteMany({
-        where: { articleId: article.id },
+    const updatedArticle = await this.prisma.$transaction(async (tx) => {
+      const article = await tx.article.update({
+        where: { slug },
+        data: {
+          title: updateArticleDto.title,
+          description: updateArticleDto.description,
+          body: updateArticleDto.body,
+          slug: newSlug,
+        },
       });
 
-      if (updateArticleDto.tags.length > 0) {
-        for (const tagName of updateArticleDto.tags) {
-          const tag = await this.prisma.tag.upsert({
-            where: { name: tagName },
-            update: {},
-            create: { name: tagName },
-          });
+      if (Array.isArray(updateArticleDto.tags)) {
+        await tx.articleTag.deleteMany({
+          where: { articleId: article.id },
+        });
 
-          await this.prisma.articleTag.create({
-            data: {
-              articleId: article.id,
-              tagId: tag.id,
-            },
-          });
+        if (updateArticleDto.tags.length > 0) {
+          for (const tagName of updateArticleDto.tags) {
+            const tag = await tx.tag.upsert({
+              where: { name: tagName },
+              update: {},
+              create: { name: tagName },
+            });
+
+            await tx.articleTag.create({
+              data: {
+                articleId: article.id,
+                tagId: tag.id,
+              },
+            });
+          }
         }
       }
-    }
+
+      return article;
+    });
 
     const currentArticle = await this.prisma.article.findUnique({
       where: { id: updatedArticle.id },
@@ -176,6 +185,7 @@ export class ArticlesService {
         },
       },
     });
+
     if (!currentArticle) {
       throw new NotFoundException('Article not found');
     }
@@ -197,7 +207,7 @@ export class ArticlesService {
       tags: currentArticle.tags.map((t) => t.tag.name),
       createdAt: currentArticle.createdAt,
       updatedAt: currentArticle.updatedAt,
-      favorited: favorited ? true : false,
+      favorited: !!favorited,
       favoritesCount: currentArticle.favoritesCount,
       author: {
         username: currentUser.username,
