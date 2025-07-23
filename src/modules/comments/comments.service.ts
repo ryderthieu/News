@@ -58,13 +58,15 @@ export class CommentsService {
     }
 
     const comments = await this.prisma.comment.findMany({
-      where: {
-        articleId: article.id,
-      },
-      include: {
+      where: { articleId: article.id },
+      select: {
+        id: true,
+        body: true,
+        createdAt: true,
+        updatedAt: true,
+        authorId: true,
         author: {
           select: {
-            id: true,
             username: true,
             bio: true,
             image: true,
@@ -73,33 +75,35 @@ export class CommentsService {
       },
     });
 
+    let followingIds = new Set<number>();
+    if (currentUser) {
+      const relationships = await this.prisma.relationship.findMany({
+        where: {
+          followerId: currentUser.id,
+          followingId: {
+            in: comments.map((c) => c.authorId),
+          },
+        },
+        select: {
+          followingId: true,
+        },
+      });
+      followingIds = new Set(relationships.map((r) => r.followingId));
+    }
+
     return {
-      comments: await Promise.all(
-        comments.map(async (comment) => {
-          const following = currentUser
-            ? await this.prisma.relationship.findUnique({
-                where: {
-                  followerId_followingId: {
-                    followerId: currentUser.id,
-                    followingId: comment.authorId,
-                  },
-                },
-              })
-            : false;
-          return {
-            id: comment.id,
-            createdAt: comment.createdAt,
-            updatedAt: comment.updatedAt,
-            body: comment.body,
-            author: {
-              username: comment.author.username,
-              bio: comment.author.bio,
-              image: comment.author.image,
-              following: !!following,
-            },
-          };
-        }),
-      ),
+      comments: comments.map((comment) => ({
+        id: comment.id,
+        createdAt: comment.createdAt,
+        updatedAt: comment.updatedAt,
+        body: comment.body,
+        author: {
+          username: comment.author.username,
+          bio: comment.author.bio,
+          image: comment.author.image,
+          following: currentUser ? followingIds.has(comment.authorId) : false,
+        },
+      })),
     };
   }
 

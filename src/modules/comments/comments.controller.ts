@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -44,6 +45,10 @@ export class CommentsController {
     @Param('slug') slug: string,
     @Param('id') id: number,
   ) {
+    if (isNaN(id)) {
+      throw new BadRequestException('Invalid comment id');
+    }
+
     return this.commentsService.delete(currentUser, slug, id);
   }
 }
