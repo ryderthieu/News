@@ -15,7 +15,6 @@ import {
   DEFAULT_OFFSET,
 } from 'src/common/constrants/pagination.constant';
 
-
 @Injectable()
 export class ArticlesService {
   constructor(private prisma: PrismaService) {}
@@ -293,6 +292,13 @@ export class ArticlesService {
               tag: { select: { name: true } },
             },
           },
+          author: {
+            select: {
+              username: true,
+              bio: true,
+              image: true,
+            },
+          },
         },
       });
 
@@ -320,9 +326,9 @@ export class ArticlesService {
         favorited: true,
         favoritesCount: updatedArticle.favoritesCount,
         author: {
-          username: currentUser.username,
-          bio: currentUser.bio,
-          image: currentUser.image,
+          username: updatedArticle.author.username,
+          bio: updatedArticle.author.bio,
+          image: updatedArticle.author.image,
           following: !!following,
         },
       },
@@ -370,6 +376,13 @@ export class ArticlesService {
               tag: { select: { name: true } },
             },
           },
+          author: {
+            select: {
+              username: true,
+              bio: true,
+              image: true,
+            },
+          },
         },
       });
       return updated;
@@ -396,9 +409,9 @@ export class ArticlesService {
         favorited: false,
         favoritesCount: updatedArticle.favoritesCount,
         author: {
-          username: currentUser.username,
-          bio: currentUser.bio,
-          image: currentUser.image,
+          username: updatedArticle.author.username,
+          bio: updatedArticle.author.bio,
+          image: updatedArticle.author.image,
           following: !!following,
         },
       },
