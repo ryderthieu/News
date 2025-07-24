@@ -1,0 +1,7 @@
+{
+  "cannot_follow_yourself": "You cannot follow yourself",
+  "already_following": "You are already following this user",
+  "cannot_unfollow_yourself": "You cannot unfollow yourself",
+  "not_following": "You are not following this user",
+  "user_not_found": "User with username {username} not found"
+}

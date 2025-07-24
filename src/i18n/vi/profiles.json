@@ -1,0 +1,7 @@
+{
+  "cannot_follow_yourself": "Bạn không thể theo dõi chính mình",
+  "already_following": "Bạn đã theo dõi người dùng này",
+  "cannot_unfollow_yourself": "Bạn không thể hủy theo dõi chính mình",
+  "not_following": "Bạn chưa theo dõi người dùng này",
+  "user_not_found": "Không tìm thấy người dùng với tên đăng nhập {username}"
+}

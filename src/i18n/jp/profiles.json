@@ -1,0 +1,7 @@
+{
+  "cannot_follow_yourself": "自分自身をフォローすることはできません",
+  "already_following": "このユーザーはすでにフォローしています",
+  "cannot_unfollow_yourself": "自分自身のフォローを解除することはできません",
+  "not_following": "このユーザーをフォローしていません",
+  "user_not_found": "ユーザー名 {username} のユーザーが見つかりません"
+}

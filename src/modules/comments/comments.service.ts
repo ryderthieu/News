@@ -6,10 +6,14 @@ import {
 import { User } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class CommentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly i18n: I18nService,
+  ) {}
 
   async create(
     currentUser: User,
@@ -21,7 +25,8 @@ export class CommentsService {
     });
 
     if (!article) {
-      throw new NotFoundException('Article not found');
+      const message = this.i18n.translate('comments.article_not_found');
+      throw new NotFoundException(message);
     }
 
     const comment = await this.prisma.comment.create({
@@ -54,7 +59,8 @@ export class CommentsService {
     });
 
     if (!article) {
-      throw new NotFoundException('Article not found');
+      const message = this.i18n.translate('comments.article_not_found');
+      throw new NotFoundException(message);
     }
 
     const comments = await this.prisma.comment.findMany({
@@ -113,7 +119,8 @@ export class CommentsService {
     });
 
     if (!article) {
-      throw new NotFoundException('Article not found');
+      const message = this.i18n.translate('comments.article_not_found');
+      throw new NotFoundException(message);
     }
 
     const comment = await this.prisma.comment.findUnique({
@@ -121,13 +128,13 @@ export class CommentsService {
     });
 
     if (!comment) {
-      throw new NotFoundException('Comment not found');
+      const message = this.i18n.translate('comments.not_found');
+      throw new NotFoundException(message);
     }
 
     if (comment.authorId !== currentUser.id) {
-      throw new ForbiddenException(
-        'You are not allowed to delete this comment',
-      );
+      const message = this.i18n.translate('comments.delete_forbidden');
+      throw new ForbiddenException(message);
     }
 
     await this.prisma.comment.delete({
@@ -135,7 +142,7 @@ export class CommentsService {
     });
 
     return {
-      message: 'Comment deleted',
+      message: this.i18n.translate('comments.deleted_success'),
     };
   }
 }

@@ -1,0 +1,9 @@
+{
+    "title_already_exists": "Title already exists",
+    "not_found": "Article not found",
+    "update_forbidden": "You are not allowed to update this article",
+    "delete_forbidden": "You are not allowed to delete this article",
+    "deleted_success": "Article deleted successfully",
+    "already_favorited": "Article already favorited",
+    "not_favorited": "Article not favorited"
+}
