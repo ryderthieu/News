@@ -4,11 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
+import { I18nService } from 'nestjs-i18n';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class ProfilesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly i18n: I18nService,
+  ) {}
 
   async get(currentUser: User | null, targetUser: User) {
     let following = false;
@@ -36,7 +40,8 @@ export class ProfilesService {
 
   async follow(currentUser: User, targetUser: User) {
     if (currentUser.username === targetUser.username) {
-      throw new BadRequestException('You cannot follow yourself');
+      const message = this.i18n.translate('profiles.cannot_follow_yourself');
+      throw new BadRequestException(message);
     }
 
     const relationship = await this.prisma.relationship.findFirst({
@@ -47,7 +52,8 @@ export class ProfilesService {
     });
 
     if (relationship) {
-      throw new BadRequestException('You are already following this user');
+      const message = this.i18n.translate('profiles.already_following');
+      throw new BadRequestException(message);
     }
 
     await this.prisma.relationship.create({
@@ -69,7 +75,8 @@ export class ProfilesService {
 
   async unfollow(currentUser: User, targetUser: User) {
     if (currentUser.username === targetUser.username) {
-      throw new BadRequestException('You cannot unfollow yourself');
+      const message = this.i18n.translate('profiles.cannot_unfollow_yourself');
+      throw new BadRequestException(message);
     }
 
     const relationship = await this.prisma.relationship.findFirst({
@@ -80,7 +87,8 @@ export class ProfilesService {
     });
 
     if (!relationship) {
-      throw new BadRequestException('You are not following this user');
+      const message = this.i18n.translate('profiles.not_following');
+      throw new BadRequestException(message);
     }
 
     await this.prisma.relationship.delete({

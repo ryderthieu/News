@@ -1,0 +1,6 @@
+{
+    "article_not_found": "記事が見つかりません",
+    "not_found": "コメントが見つかりません",
+    "delete_forbidden": "このコメントを削除する権限がありません",
+    "deleted_success": "コメントが削除されました"
+}

@@ -1,0 +1,8 @@
+{
+    "already_exists": "ユーザーは既に存在します",
+    "not_found": "ユーザーが見つかりません",
+    "email_already_exists": "メールアドレスは既に使用されています",
+    "username_already_exists": "ユーザー名は既に使用されています",
+    "password_confirmation_required": "パスワードの確認が必要です",
+    "password_mismatch": "パスワードと確認用パスワードが一致しません"
+}

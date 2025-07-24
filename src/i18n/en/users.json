@@ -1,0 +1,8 @@
+{
+    "already_exists": "User already exists",
+    "not_found": "User not found",
+    "email_already_exists": "Email already exists",
+    "username_already_exists": "Username already exists",
+    "password_confirmation_required": "Password confirmation is required",
+    "password_mismatch": "Password and password confirmation do not match"
+}

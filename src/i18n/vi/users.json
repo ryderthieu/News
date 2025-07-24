@@ -1,0 +1,8 @@
+{
+    "already_exists": "Người dùng đã tồn tại",
+    "not_found": "Không tìm thấy người dùng",
+    "email_already_exists": "Email đã được sử dụng",
+    "username_already_exists": "Tên người dùng đã được sử dụng",
+    "password_confirmation_required": "Vui lòng xác nhận lại mật khẩu",
+    "password_mismatch": "Mật khẩu và xác nhận mật khẩu không khớp"
+}

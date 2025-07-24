@@ -14,16 +14,23 @@ import {
   DEFAULT_LIMIT,
   DEFAULT_OFFSET,
 } from 'src/common/constrants/pagination.constant';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class ArticlesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly i18n: I18nService,
+  ) {}
 
   async create(currentUser: User, dto: CreateArticleDto) {
     let slug = slugify(dto.title, { lower: true });
 
     const exists = await this.prisma.article.findUnique({ where: { slug } });
-    if (exists) throw new ConflictException('Title already exists');
+    if (exists) {
+      const message = this.i18n.translate('articles.title_already_exists');
+      throw new ConflictException(message);
+    }
 
     const createdArticle = await this.prisma.$transaction(async (tx) => {
       const article = await tx.article.create({
@@ -101,7 +108,8 @@ export class ArticlesService {
     });
 
     if (!article) {
-      throw new NotFoundException('Article not found');
+      const message = this.i18n.translate('articles.not_found');
+      throw new NotFoundException(message);
     }
 
     return {
@@ -119,13 +127,13 @@ export class ArticlesService {
     });
 
     if (!article) {
-      throw new NotFoundException('Article not found');
+      const message = this.i18n.translate('articles.not_found');
+      throw new NotFoundException(message);
     }
 
     if (article.authorId !== currentUser.id) {
-      throw new ForbiddenException(
-        'You are not allowed to update this article',
-      );
+      const message = this.i18n.translate('articles.update_forbidden');
+      throw new ForbiddenException(message);
     }
 
     const newSlug = slugify(updateArticleDto.title, { lower: true });
@@ -135,7 +143,8 @@ export class ArticlesService {
         where: { slug: newSlug },
       });
       if (existing) {
-        throw new ConflictException('Title already exists');
+        const message = this.i18n.translate('articles.title_already_exists');
+        throw new ConflictException(message);
       }
     }
 
@@ -192,7 +201,8 @@ export class ArticlesService {
     });
 
     if (!currentArticle) {
-      throw new NotFoundException('Article not found');
+      const message = this.i18n.translate('articles.not_found');
+      throw new NotFoundException(message);
     }
 
     const favorited = await this.prisma.favorite.findUnique({
@@ -233,13 +243,13 @@ export class ArticlesService {
     });
 
     if (!article) {
-      throw new NotFoundException('Article not found');
+      const message = this.i18n.translate('articles.not_found');
+      throw new NotFoundException(message);
     }
 
     if (article.authorId !== currentUser.id) {
-      throw new ForbiddenException(
-        'You are not allowed to delete this article',
-      );
+      const message = this.i18n.translate('articles.delete_forbidden');
+      throw new ForbiddenException(message);
     }
 
     await this.prisma.articleTag.deleteMany({
@@ -250,7 +260,7 @@ export class ArticlesService {
       where: { slug },
     });
 
-    return { message: 'Article deleted successfully' };
+    return { message: this.i18n.translate('articles.deleted_success') };
   }
 
   async favorite(slug: string, currentUser: User) {
@@ -259,7 +269,8 @@ export class ArticlesService {
     });
 
     if (!article) {
-      throw new NotFoundException('Article not found');
+      const message = this.i18n.translate('articles.not_found');
+      throw new NotFoundException(message);
     }
 
     const favorite = await this.prisma.favorite.findUnique({
@@ -272,7 +283,8 @@ export class ArticlesService {
     });
 
     if (favorite) {
-      throw new ConflictException('Article already favorited');
+      const message = this.i18n.translate('articles.already_favorited');
+      throw new ConflictException(message);
     }
 
     const updatedArticle = await this.prisma.$transaction(async (tx) => {
@@ -341,7 +353,8 @@ export class ArticlesService {
     });
 
     if (!article) {
-      throw new NotFoundException('Article not found');
+      const message = this.i18n.translate('articles.not_found');
+      throw new NotFoundException(message);
     }
 
     const favorite = await this.prisma.favorite.findUnique({
@@ -354,7 +367,8 @@ export class ArticlesService {
     });
 
     if (!favorite) {
-      throw new ConflictException('Article not favorited');
+      const message = this.i18n.translate('articles.not_favorited');
+      throw new ConflictException(message);
     }
 
     const updatedArticle = await this.prisma.$transaction(async (tx) => {

@@ -8,10 +8,14 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { hashPassword } from 'src/common/utils/hash.utils';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from '@prisma/client';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly i18n: I18nService,
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
     const persistedUser = await this.prisma.user.findFirst({
@@ -23,7 +27,10 @@ export class UsersService {
       },
     });
 
-    if (persistedUser) throw new BadRequestException('User already exists');
+    if (persistedUser) {
+      const message = this.i18n.translate('users.already_exists');
+      throw new BadRequestException(message);
+    }
 
     const hashed = await hashPassword(createUserDto.password);
     const user = await this.prisma.user.create({
@@ -42,7 +49,8 @@ export class UsersService {
     });
 
     if (!existingUser) {
-      throw new NotFoundException('User not found');
+      const message = this.i18n.translate('users.not_found');
+      throw new NotFoundException(message);
     }
 
     if (updateUserDto.email) {
@@ -53,7 +61,8 @@ export class UsersService {
       });
 
       if (emailTaken) {
-        throw new BadRequestException('Email already exists');
+        const message = this.i18n.translate('users.email_already_exists');
+        throw new BadRequestException(message);
       }
     }
 
@@ -65,7 +74,8 @@ export class UsersService {
       });
 
       if (usernameTaken) {
-        throw new BadRequestException('Username already exists');
+        const message = this.i18n.translate('users.username_already_exists');
+        throw new BadRequestException(message);
       }
     }
 
@@ -73,13 +83,15 @@ export class UsersService {
 
     if (updateUserDto.password) {
       if (!updateUserDto.passwordConfirmation) {
-        throw new BadRequestException('Password confirmation is required');
+        const message = this.i18n.translate(
+          'users.password_confirmation_required',
+        );
+        throw new BadRequestException(message);
       }
 
       if (updateUserDto.password !== updateUserDto.passwordConfirmation) {
-        throw new BadRequestException(
-          'Password and password confirmation do not match',
-        );
+        const message = this.i18n.translate('users.password_mismatch');
+        throw new BadRequestException(message);
       }
 
       updateData.password = await hashPassword(updateUserDto.password);

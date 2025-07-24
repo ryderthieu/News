@@ -1,0 +1,9 @@
+{
+    "title_already_exists": "タイトルは既に存在します",
+    "not_found": "記事が見つかりません",
+    "update_forbidden": "この記事を更新する権限がありません",
+    "delete_forbidden": "この記事を削除する権限がありません",
+    "deleted_success": "記事が正常に削除されました",
+    "already_favorited": "記事は既にお気に入りに追加されています",
+    "not_favorited": "記事はまだお気に入りに追加されていません"
+}

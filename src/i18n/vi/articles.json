@@ -1,0 +1,9 @@
+{
+    "title_already_exists": "Tiêu đề đã tồn tại",
+    "not_found": "Không tìm thấy bài viết",
+    "update_forbidden": "Bạn không có quyền cập nhật bài viết này",
+    "delete_forbidden": "Bạn không có quyền xóa bài viết này",
+    "deleted_success": "Xóa bài viết thành công",
+    "already_favorited": "Bài viết đã được yêu thích",
+    "not_favorited": "Bài viết chưa được yêu thích"
+}
