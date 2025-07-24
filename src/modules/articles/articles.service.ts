@@ -73,6 +73,7 @@ export class ArticlesService {
       updatedAt: createdArticle.updatedAt,
       favorited: false,
       favoritesCount: 0,
+      commentsCount: 0,
       author: {
         username: currentUser.username,
         bio: currentUser.bio,
@@ -112,8 +113,18 @@ export class ArticlesService {
       throw new NotFoundException(message);
     }
 
+    const commentsCount = await this.prisma.comment.count({
+      where: {
+        articleId: article.id,
+      },
+    });
+
     return {
-      article: { ...article, tags: article.tags.map((t) => t.tag.name) },
+      article: {
+        ...article,
+        tags: article.tags.map((t) => t.tag.name),
+        commentsCount: commentsCount,
+      },
     };
   }
 
@@ -214,6 +225,12 @@ export class ArticlesService {
       },
     });
 
+    const commentsCount = await this.prisma.comment.count({
+      where: {
+        articleId: currentArticle.id,
+      },
+    });
+
     const formattedArticle = {
       slug: currentArticle.slug,
       title: currentArticle.title,
@@ -224,6 +241,7 @@ export class ArticlesService {
       updatedAt: currentArticle.updatedAt,
       favorited: !!favorited,
       favoritesCount: currentArticle.favoritesCount,
+      commentsCount: commentsCount,
       author: {
         username: currentUser.username,
         bio: currentUser.bio,
@@ -326,6 +344,12 @@ export class ArticlesService {
       },
     });
 
+    const commentsCount = await this.prisma.comment.count({
+      where: {
+        articleId: article.id,
+      },
+    });
+
     return {
       article: {
         slug: updatedArticle.slug,
@@ -337,6 +361,7 @@ export class ArticlesService {
         updatedAt: updatedArticle.updatedAt,
         favorited: true,
         favoritesCount: updatedArticle.favoritesCount,
+        commentsCount: commentsCount,
         author: {
           username: updatedArticle.author.username,
           bio: updatedArticle.author.bio,
@@ -411,6 +436,12 @@ export class ArticlesService {
       },
     });
 
+    const commentsCount = await this.prisma.comment.count({
+      where: {
+        articleId: article.id,
+      },
+    });
+
     return {
       article: {
         slug: updatedArticle.slug,
@@ -422,6 +453,7 @@ export class ArticlesService {
         updatedAt: updatedArticle.updatedAt,
         favorited: false,
         favoritesCount: updatedArticle.favoritesCount,
+        commentsCount: commentsCount,
         author: {
           username: updatedArticle.author.username,
           bio: updatedArticle.author.bio,
@@ -521,6 +553,12 @@ export class ArticlesService {
             })
           : null;
 
+        const commentsCount = await this.prisma.comment.count({
+          where: {
+            articleId: article.id,
+          },
+        });
+
         return {
           slug: article.slug,
           title: article.title,
@@ -531,6 +569,7 @@ export class ArticlesService {
           updatedAt: article.updatedAt,
           favorited: !!favourited,
           favoritesCount: article.favoritesCount,
+          commentsCount: commentsCount,
           author: {
             username: article.author.username,
             bio: article.author.bio,
@@ -612,6 +651,12 @@ export class ArticlesService {
           },
         });
 
+        const commentsCount = await this.prisma.comment.count({
+          where: {
+            articleId: article.id,
+          },
+        });
+
         return {
           slug: article.slug,
           title: article.title,
@@ -622,6 +667,7 @@ export class ArticlesService {
           updatedAt: article.updatedAt,
           favorited: !!favourited,
           favoritesCount: article.favoritesCount,
+          commentsCount: commentsCount,
           author: {
             username: article.author.username,
             bio: article.author.bio,
