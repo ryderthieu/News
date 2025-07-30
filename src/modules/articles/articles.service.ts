@@ -23,8 +23,11 @@ export class ArticlesService {
     private readonly i18n: I18nService,
   ) {}
 
-  async create(currentUser: User, dto: CreateArticleDto) {
-    let slug = slugify(dto.title, { lower: true });
+  async create(currentUser: User, createArticleDto: CreateArticleDto) {
+    const slug = this.generateSlug(
+      createArticleDto.title,
+      createArticleDto.isDraft ?? false,
+    );
 
     const exists = await this.prisma.article.findUnique({ where: { slug } });
     if (exists) {
@@ -35,15 +38,16 @@ export class ArticlesService {
     const createdArticle = await this.prisma.$transaction(async (tx) => {
       const article = await tx.article.create({
         data: {
-          title: dto.title,
-          description: dto.description,
-          body: dto.body,
+          title: createArticleDto.title,
+          description: createArticleDto.description,
+          body: createArticleDto.body,
           authorId: currentUser.id,
+          isDraft: createArticleDto.isDraft ?? false,
           slug,
         },
       });
 
-      const tagList = dto.tags ?? [];
+      const tagList = createArticleDto.tags ?? [];
 
       for (const tagName of tagList) {
         const tag = await tx.tag.upsert({
@@ -68,12 +72,13 @@ export class ArticlesService {
       title: createdArticle.title,
       description: createdArticle.description,
       body: createdArticle.body,
-      tags: dto.tags,
+      tags: createArticleDto.tags,
       createdAt: createdArticle.createdAt,
       updatedAt: createdArticle.updatedAt,
       favorited: false,
       favoritesCount: 0,
       commentsCount: 0,
+      isDraft: createdArticle.isDraft,
       author: {
         username: currentUser.username,
         bio: currentUser.bio,
@@ -85,7 +90,7 @@ export class ArticlesService {
     return { article: formattedArticle };
   }
 
-  async getArticle(slug: string) {
+  async getArticle(slug: string, currentUser?: User) {
     const article = await this.prisma.article.findUnique({
       where: { slug },
       include: {
@@ -109,6 +114,11 @@ export class ArticlesService {
     });
 
     if (!article) {
+      const message = this.i18n.translate('articles.not_found');
+      throw new NotFoundException(message);
+    }
+
+    if (article.isDraft && article.authorId !== currentUser?.id) {
       const message = this.i18n.translate('articles.not_found');
       throw new NotFoundException(message);
     }
@@ -142,12 +152,31 @@ export class ArticlesService {
       throw new NotFoundException(message);
     }
 
+    if (article.isDraft && article.authorId !== currentUser.id) {
+      const message = this.i18n.translate('articles.not_found');
+      throw new NotFoundException(message);
+    }
+
     if (article.authorId !== currentUser.id) {
       const message = this.i18n.translate('articles.update_forbidden');
       throw new ForbiddenException(message);
     }
 
-    const newSlug = slugify(updateArticleDto.title, { lower: true });
+    let newSlug = article.slug;
+    if (updateArticleDto.title) {
+      newSlug = this.generateSlug(
+        updateArticleDto.title,
+        updateArticleDto.isDraft ?? false,
+      );
+    }
+
+    if (
+      article.isDraft &&
+      !updateArticleDto.isDraft &&
+      !updateArticleDto.title
+    ) {
+      newSlug = this.generateSlug(article.title, false);
+    }
 
     if (newSlug !== article.slug) {
       const existing = await this.prisma.article.findUnique({
@@ -166,6 +195,7 @@ export class ArticlesService {
           title: updateArticleDto.title,
           description: updateArticleDto.description,
           body: updateArticleDto.body,
+          isDraft: updateArticleDto.isDraft,
           slug: newSlug,
         },
       });
@@ -242,6 +272,7 @@ export class ArticlesService {
       favorited: !!favorited,
       favoritesCount: currentArticle.favoritesCount,
       commentsCount: commentsCount,
+      isDraft: currentArticle.isDraft,
       author: {
         username: currentUser.username,
         bio: currentUser.bio,
@@ -473,7 +504,7 @@ export class ArticlesService {
       offset = DEFAULT_OFFSET,
     } = query;
 
-    const where: any = {};
+    const where: any = { isDraft: false };
 
     if (tag) {
       where.tags = {
@@ -570,6 +601,7 @@ export class ArticlesService {
           favorited: !!favourited,
           favoritesCount: article.favoritesCount,
           commentsCount: commentsCount,
+          isDraft: article.isDraft,
           author: {
             username: article.author.username,
             bio: article.author.bio,
@@ -595,6 +627,7 @@ export class ArticlesService {
     const [articles, total] = await this.prisma.$transaction([
       this.prisma.article.findMany({
         where: {
+          isDraft: false,
           author: {
             followers: {
               some: {
@@ -668,6 +701,7 @@ export class ArticlesService {
           favorited: !!favourited,
           favoritesCount: article.favoritesCount,
           commentsCount: commentsCount,
+          isDraft: article.isDraft,
           author: {
             username: article.author.username,
             bio: article.author.bio,
@@ -685,5 +719,57 @@ export class ArticlesService {
       limit,
       totalOffset: Math.ceil(total / limit),
     };
+  }
+
+  async getDrafts(currentUser: User, query: GetArticlesQueryDto) {
+    const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET } = query;
+
+    const [drafts, total] = await this.prisma.$transaction([
+      this.prisma.article.findMany({
+        where: {
+          isDraft: true,
+          authorId: currentUser.id,
+        },
+        take: limit,
+        skip: offset,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          createdAt: true,
+          updatedAt: true,
+          isDraft: true,
+        },
+      }),
+      this.prisma.article.count({
+        where: {
+          isDraft: true,
+          authorId: currentUser.id,
+        },
+      }),
+    ]);
+    if (!drafts) {
+      const message = this.i18n.translate('articles.not_found');
+      throw new NotFoundException(message);
+    }
+
+    return {
+      articles: drafts,
+      articlesCount: total,
+      offset,
+      limit,
+      totalOffset: Math.ceil(total / limit),
+    };
+  }
+
+  generateSlug(title: string, isDraft: boolean): string {
+    let slug = slugify(title, { lower: true });
+    if (isDraft) {
+      slug = `${slug}-${Date.now()}-draft`;
+    }
+    return slug;
   }
 }

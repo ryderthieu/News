@@ -41,6 +41,7 @@ model Article {
   body           String
   authorId       Int
   favoritesCount Int      @default(0)
+  isDraft        Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
