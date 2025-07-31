@@ -15,6 +15,13 @@ import {
   DEFAULT_OFFSET,
 } from 'src/common/constrants/pagination.constant';
 import { I18nService } from 'nestjs-i18n';
+import {
+  addMonths,
+  endOfMonth,
+  format,
+  isBefore,
+  startOfMonth,
+} from 'date-fns';
 
 @Injectable()
 export class ArticlesService {
@@ -762,6 +769,50 @@ export class ArticlesService {
       offset,
       limit,
       totalOffset: Math.ceil(total / limit),
+    };
+  }
+
+  async stats(currentUser: User, minInteractions: number) {
+    const startDate = startOfMonth(currentUser.createdAt);
+    const endDate = endOfMonth(new Date());
+
+    const stats = new Map<string, number>();
+    let current = startDate;
+
+    while (!isBefore(endDate, current)) {
+      const key = format(current, 'yyyy-MM');
+      stats.set(key, 0);
+      current = addMonths(current, 1);
+    }
+
+    const articles = await this.prisma.article.findMany({
+      where: {
+        authorId: currentUser.id,
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      select: {
+        id: true,
+        favorites: true,
+        comments: true,
+        createdAt: true,
+      },
+    });
+
+    for (const article of articles) {
+      if (
+        article.comments.length + article.favorites.length >=
+        minInteractions
+      ) {
+        const key = format(article.createdAt, 'yyyy-MM');
+        stats.set(key, (stats.get(key) || 0) + 1);
+      }
+    }
+
+    return {
+      stats: Array.from(stats.entries()).map(([month, count]) => ({
+        month,
+        count,
+      })),
     };
   }
 

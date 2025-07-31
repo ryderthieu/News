@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -17,6 +18,7 @@ import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { GetArticlesQueryDto } from './dto/get-articles-query.dto';
 import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
+import { MIN_INTERACTIONS_DEFAULT } from 'src/common/constrants/stats.constant';
 
 @Controller('articles')
 export class ArticlesController {
@@ -48,6 +50,21 @@ export class ArticlesController {
     @Query() query: GetArticlesQueryDto,
   ) {
     return this.articlesService.getDrafts(currentUser, query);
+  }
+
+  @Get('stats')
+  @UseGuards(AuthGuard('jwt'))
+  async stats(
+    @CurrentUser() currentUser: User,
+    @Query('minInteractions') minInteractions: number,
+  ) {
+    if (isNaN(minInteractions)) {
+      throw new BadRequestException('Invalid min interaction');
+    }
+    return this.articlesService.stats(
+      currentUser,
+      minInteractions ?? MIN_INTERACTIONS_DEFAULT,
+    );
   }
 
   @Get(':slug')

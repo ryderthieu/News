@@ -1,0 +1,1 @@
+export const MIN_INTERACTIONS_DEFAULT = 50;
