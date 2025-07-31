@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class UpdateArticleDto {
   @IsOptional()
@@ -17,4 +17,8 @@ export class UpdateArticleDto {
   @IsArray()
   @IsString({ each: true })
   tags: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  isDraft: boolean;
 }

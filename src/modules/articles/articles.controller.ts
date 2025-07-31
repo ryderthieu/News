@@ -32,9 +32,31 @@ export class ArticlesController {
     return this.articlesService.create(currentUser, createArticleDto);
   }
 
+  @Get('feed')
+  @UseGuards(AuthGuard('jwt'))
+  async getFeed(
+    @Query() query: GetArticlesQueryDto,
+    @CurrentUser() currentUser: User,
+  ) {
+    return this.articlesService.getFeed(query, currentUser);
+  }
+
+  @Get('drafts')
+  @UseGuards(AuthGuard('jwt'))
+  async getDrafts(
+    @CurrentUser() currentUser: User,
+    @Query() query: GetArticlesQueryDto,
+  ) {
+    return this.articlesService.getDrafts(currentUser, query);
+  }
+
   @Get(':slug')
-  async getArticle(@Param('slug') slug: string) {
-    return this.articlesService.getArticle(slug);
+  @OptionalAuth()
+  async getArticle(
+    @Param('slug') slug: string,
+    @CurrentUser() currentUser?: User,
+  ) {
+    return this.articlesService.getArticle(slug, currentUser);
   }
 
   @Put(':slug')
@@ -78,14 +100,5 @@ export class ArticlesController {
     @CurrentUser() currentUser: User,
   ) {
     return this.articlesService.getList(query, currentUser);
-  }
-
-  @Get('feed')
-  @UseGuards(AuthGuard('jwt'))
-  async getFeed(
-    @Query() query: GetArticlesQueryDto,
-    @CurrentUser() currentUser: User,
-  ) {
-    return this.articlesService.getFeed(query, currentUser);
   }
 }
